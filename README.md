@@ -10,7 +10,7 @@ On **IPA** you need a service user which you will use wihtin this script to inte
 
 #About this script
 - Author: Frank Reimer
-- Version: 1.0
+- Version: 1.1
 - Creation Date: 2016-06-23
 
 # Table of content
@@ -47,6 +47,7 @@ hg-<application>-<lifecycle-environment>
 ```
 hg-<application>-<lifecycle-environment>
 ```
+- creates custom host partitioning table and uploads it to Satellite. Furthermore it assigns the parttition table to your host and to the default operating system defined in this script.
 
 #Prerequisites:
 ### 1. Create IPA automation service user on IPA server

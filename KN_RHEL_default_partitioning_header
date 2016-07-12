@@ -1,0 +1,24 @@
+#Dynamic
+
+<% if @host.operatingsystem.major.to_i > 6 %>
+  <% fstype = "xfs" %>
+  <% mountopts = 'inode64,noatime,nodiratime,nobarrier' %>
+<% else %>
+  <% fstype = "ext4" %>
+  <% mountopts = 'noatime,nodiratime,noacl,barrier=0,data=writeback' %>
+<% end %>
+
+cat <<EOF > /tmp/diskpart.cfg
+zerombr
+clearpart --all --drives=sda,sdb,sdc --initlabel
+
+part /boot --fstype=<%= fstype %> --asprimary --ondisk=sda --size=1000
+part pv.001 --asprimary --size=1 --ondisk=sdb --grow
+part pv.002 --asprimary --size=1 --ondisk=sdc --grow
+
+volgroup vg_system --pesize=4096 pv.001
+volgroup vg_data --pesize=4096 pv.002
+
+logvol swap --fstype=swap --name=swaplv --vgname=vg_system --size=4096
+
+

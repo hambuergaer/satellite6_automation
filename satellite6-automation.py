@@ -38,6 +38,7 @@ import subprocess
 import platform
 import os.path
 import string
+import fileinput
 from datetime import datetime
 from optparse import OptionParser
 from uuid import getnode
@@ -92,21 +93,21 @@ def verify_location(location):
 	except:
 		print log.ERROR + "ERROR" + log.END
 		sys.exit(1)
-		
-def verify_lifecycle(environment):
-        cmd_get_lifecycle = hammer_cmd + " --csv lifecycle-environment list --organization " + ORGANIZATION
-        print cmd_get_lifecycle
-        try:
-                perform_cmd = subprocess.Popen(cmd_get_lifecycle, shell=True, stdout=subprocess.PIPE)
-                lifecycle = perform_cmd.stdout.read()
-                for line in islice(lifecycle.strip().split("\n"), 1, None):     # print output without CSV header
-                        if environment in line:
-                                return True
-                                break
 
-        except:
-                print log.ERROR + "ERROR" + log.END
-                sys.exit(1)
+def verify_lifecycle(environment):
+	cmd_get_lifecycle = hammer_cmd + " --csv lifecycle-environment list --organization " + ORGANIZATION
+	print cmd_get_lifecycle
+	try:
+		perform_cmd = subprocess.Popen(cmd_get_lifecycle, shell=True, stdout=subprocess.PIPE)
+		lifecycle = perform_cmd.stdout.read()
+		for line in islice(lifecycle.strip().split("\n"), 1, None):	# print output without CSV header
+			if environment in line:	
+				return True
+				break
+
+	except:
+		print log.ERROR + "ERROR" + log.END
+		sys.exit(1)
 
 def verify_parent_hostgroup(parenthg):
 	cmd_get_parent_hostgroup = hammer_cmd + " --csv hostgroup info --name " + parenthg
@@ -172,17 +173,82 @@ def create_child_hostgroup(childhg,parenthg,puppetenv):
 		print log.ERROR + "ERROR" + log.END
 		sys.exit(1)
 
-def create_new_host(client_fqdn,organization,location,hostgroup,partitiontable,puppetenv,*nics):
+def create_partitioning_table(mountpoint,size):
+	default_mountpoints = ['/','/tmp','/usr','/var','/var/log','/var/log/audit']
+	default_volume_group = "vg_system"
+	application_volume_group = "vg_data"
+	newlines = []
+	header = file('/home/svc-satellite-automation/satellite6_automation/KN_RHEL_default_partitioning_header').read()
+	eof = "\nEOF"
+	size = str(int(size)*1024)
+	outfile = open('/home/svc-satellite-automation/tmp/'+HOSTNAME+'.ptable','a')
+
+	if str(mountpoint) == "/":
+		newlines.append('logvol ' + mountpoint + ' --fstype=<%= fstype %> --name=rootlv --vgname=' + default_volume_group + ' --size=' + size + ' --fsoptions="<%=  mountopts %>"\n')
+	
+	elif str(mountpoint) in default_mountpoints:
+		newlines.append('logvol ' + mountpoint + ' --fstype=<%= fstype %> --name=' + mountpoint.replace('/','') + 'lv --vgname=' + default_volume_group + ' --size=' + size + ' --fsoptions="<%=  mountopts %>"\n')
+		print "Mountpoint " + mountpoint + " found in default mounts."
+	else:
+		newlines.append('logvol ' + mountpoint + ' --fstype=<%= fstype %> --name=' + mountpoint.replace('/','') + 'lv --vgname=' + application_volume_group + ' --size=' + size + ' --fsoptions="<%=  mountopts %>"\n')
+	
+	outfile.writelines(newlines)
+
+def create_partitioning_table_header():
+	header = file('/home/svc-satellite-automation/satellite6_automation/KN_RHEL_default_partitioning_header').read()
+	outfile = open('/home/svc-satellite-automation/tmp/'+HOSTNAME+'.ptable','a')
+	outfile.writelines(header)
+
+def create_partitioning_table_eof():
+	eof = "\nEOF"
+	outfile = open('/home/svc-satellite-automation/tmp/'+HOSTNAME+'.ptable','a')
+	outfile.writelines(eof)
+
+def upload_partitioning_table():
+	ptable = "/home/svc-satellite-automation/tmp/"+ HOSTNAME + ".ptable"
+	cmd_upload_ptable = hammer_cmd + " partition-table create --os-family Redhat --name "+ HOSTNAME + "_ptable --file " + ptable
+	
+	if os.path.exists(ptable):
+		try:
+			print log.INFO + "INFO: try to upload partition table " + ptable + " to Satellite." + log.END
+			perform_cmd = subprocess.Popen(cmd_upload_ptable, shell=True, stdout=subprocess.PIPE)
+			upload_ptable = perform_cmd.stdout.read()
+
+		except:
+			print log.ERROR + "ERROR: could not upload partition table " + ptable + log.END
+			sys.exit(1)
+	else:
+		print log.ERROR + "ERROR: could not upload partition table " + ptable + ". File does not exist." + log.END
+		sys.exit(1)
+
+def assign_os_to_partitioning_table():
+	ptable = HOSTNAME+ "_ptable"
+	cmd_assig_os_to_ptable = hammer_cmd + " partition-table add-operatingsystem --name " + ptable + " --operatingsystem " + OS
+	
+	try:
+		perform_cmd = subprocess.Popen(cmd_assig_os_to_ptable, shell=True, stdout=subprocess.PIPE)
+		upload_ptable = perform_cmd.stdout.read()
+
+	except:
+		print log.ERROR + "ERROR: could not assign partition table " + ptable + " to OS " + OS + log.END
+		sys.exit(1)
+
+def delete_partitioning_table():
+	ptable = "/home/svc-satellite-automation/tmp/"+ HOSTNAME + ".ptable"
+	if os.path.exists(ptable):
+		os.remove(ptable)
+
+def create_new_host(client_fqdn,organization,location,hostgroup,puppetenv,*nics):
 	if ( PRIMARY_NIC_IP and PRIMARY_NIC_MAC and SUBNET_ID_PRIMARY_NIC ) and not SECONDARY_NIC_IP:
-		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY
+		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY + " --partition-table " + HOSTNAME + "_ptable" + " --operatingsystem " + OS
 	#	print "1. NIC: " + cmd_create_new_host
 	
 	elif ( ( PRIMARY_NIC_IP and PRIMARY_NIC_MAC and SUBNET_ID_PRIMARY_NIC ) and ( SECONDARY_NIC_IP and SECONDARY_NIC_MAC and SUBNET_ID_SECONDARY_NIC )) and not THIRD_NIC_IP:
-		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --interface 'type=Nic::Interface,managed=true,mac="+SECONDARY_NIC_MAC+",ip="+SECONDARY_NIC_IP+",subnet_id="+SUBNET_ID_SECONDARY_NIC+",identifier=eth1'" + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY
+		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --interface 'type=Nic::Interface,managed=true,mac="+SECONDARY_NIC_MAC+",ip="+SECONDARY_NIC_IP+",subnet_id="+SUBNET_ID_SECONDARY_NIC+",identifier=eth1'" + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY + " --partition-table " + HOSTNAME + "_ptable" + " --operatingsystem " + OS
 	#	print "2. NICs: " + cmd_create_new_host
 	
 	elif ( ( PRIMARY_NIC_IP and PRIMARY_NIC_MAC and SUBNET_ID_PRIMARY_NIC ) and ( SECONDARY_NIC_IP and SECONDARY_NIC_MAC and SUBNET_ID_SECONDARY_NIC ) and ( THIRD_NIC_IP and THIRD_NIC_MAC and SUBNET_ID_THIRD_NIC ) ):
-		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --interface 'type=Nic::Interface,managed=true,mac="+SECONDARY_NIC_MAC+",ip="+SECONDARY_NIC_IP+",subnet_id="+SUBNET_ID_SECONDARY_NIC+",identifier=eth1'" + " --interface 'type=Nic::Interface,managed=true,mac="+THIRD_NIC_MAC+",ip="+THIRD_NIC_IP+",subnet_id="+SUBNET_ID_THIRD_NIC+",identifier=eth2'" + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY
+		cmd_create_new_host = hammer_cmd + " host create --name " + client_fqdn + " --organization " + organization + " --location " + location + " --hostgroup " + hostgroup + " --ip " + PRIMARY_NIC_IP + " --mac " + PRIMARY_NIC_MAC + " --subnet-id " + SUBNET_ID_PRIMARY_NIC + " --domain " + DOMAIN + " --realm " + REALM + " --environment-id " + puppetenv + " --interface 'type=Nic::Interface,managed=true,mac="+SECONDARY_NIC_MAC+",ip="+SECONDARY_NIC_IP+",subnet_id="+SUBNET_ID_SECONDARY_NIC+",identifier=eth1'" + " --interface 'type=Nic::Interface,managed=true,mac="+THIRD_NIC_MAC+",ip="+THIRD_NIC_IP+",subnet_id="+SUBNET_ID_THIRD_NIC+",identifier=eth2'" + " --puppet-ca-proxy " + PUPPET_CA_PROXY + " --puppet-proxy " + PUPPET_PROXY + " --partition-table " + HOSTNAME + "_ptable" + " --operatingsystem " + OS
 	#	print "3. NICs: " + cmd_create_new_host 
 
 	try:
@@ -402,33 +468,33 @@ parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="
 (options, args) = parser.parse_args()
 
 if not (( options.client_fqdn and options.create_host ) or ( options.client_fqdn and options.update_host )):
-    print log.ERROR + "You must specify at least client fqdn, the primary NIC information, if you want to create a new host (--create-host) and if you want to deploy your host in intranet or in dmz zone. See usage:\n" + log.END
+    print log.ERROR + "You must specify at least client fqdn and if you want to create a new host (--create-host) or update a host (--update-host). See usage:\n" + log.END
     parser.print_help()
-    print "\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host --primary-nic-ip 192.168.100.10 --primary-nic-mask 255.255.255.0 --primary-nic-gateway 192.168.100.1 --primary-nic-mac 00:00:00:00:00:00 --intranet"
+    print "\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host"
     sys.exit(1)
 else:
     SAT6_FQDN = options.sat6_fqdn
     CLIENT_FQDN = options.client_fqdn
     HOSTNAME = CLIENT_FQDN.split(".")[0]
     DOMAIN = CLIENT_FQDN.split(".")[1]+"."+CLIENT_FQDN.split(".")[2]
-    ORGANIZATION  = ""																		# Change this variable according to your needs
+    ORGANIZATION  = ""                                                                      # Change this variable according to your needs
     LOCATION  = options.location
     APPLICATION_ID = str(options.application_id)
     ENVIRONMENT = str(options.environment)
     PARTITIONING = options.partitioning
     PARENT_HOSTGROUP = "hg-"+APPLICATION_ID
     HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT)
-    REALM = ""																					# Change this variable according to your IPA realm or make it an option to pass by
-    ARCHITECTURE = "x86_64"																# Change this variable according to your needs
-    OS = ""																						# Change this variable according to your default operating system or make it an option to pass by
-    DEFAULT_CONTENT_VIEW = ""																# Change this variable according to your default content view you want to assign to your hosts or make it an option to pass by
-    DEFAULT_ACTIVATION_KEY = ""															# Change this variable according to your default activation key or make it an option to pass by
+    REALM = ""                                                                              # Change this variable to your IPA Realm
+    ARCHITECTURE = "x86_64"
+    OS = ""                                                                                 # Change this variable to your default operating system name in Satellite
+    DEFAULT_CONTENT_VIEW = ""                                                               # Change this variable to your Satellite default (composite) content view
+    DEFAULT_ACTIVATION_KEY = ""                                                             # Change this variable to your Satellite default activation key you want to use for host registration 
     PUPPET_ENV_ID = get_environment_id(DEFAULT_CONTENT_VIEW)
-    PRINCIPAL = ""																			# Change this variable to your IPA automation service user	
-    KDC = ""																					# Change this variable to one of your IPA servers
-    KEYTAB = "/home/"+PRINCIPAL+"/"+PRINCIPAL+".keytab"
-    NFS_HOST_ISO_STORE = ""																# Change this variable to the NFS mount where you want to store your host iso images (1 MB per ISO)
-    DNS_PRIMARY = ""																			# Change this variable to your primary DNS server or make it an option to pass by
+    PRINCIPAL = ""                                                                          # Change this variable to your IPA automation service user name
+    KDC = ""                                                                                # Change this variable to one of your IPA servers
+    KEYTAB = "/home/"+PRINCIPAL+/PRINCIPAL".keytab"
+    NFS_HOST_ISO_STORE = ""                                                                 # Change this variable to your NFS mount where you want to store host iso images
+    DNS_PRIMARY = ""                                                                        # Change this variable to your primary DNS server
 
 if options.primary_nic_ip:
     PRIMARY_NIC_IP = str(options.primary_nic_ip)
@@ -493,15 +559,15 @@ else:
 
 if options.intranet:
     INTRANET=True
-    PUPPET_PROXY = ""												# Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = ""											# Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = "dehamsl1204.int.kn"                                                     # Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = "dehamsl1204.int.kn"                                                  # Change this variable to your Satellite or Capsule server
 else:
     INTRANET=False
 
 if options.dmz:
     DMZ=True
-    PUPPET_PROXY = ""												# Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = ""											# Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = "dehamsl1204.int.kn"                                                     # Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = "dehamsl1204.int.kn"                                                  # Change this variable to your Satellite or Capsule server
 else:
     DMZ=False
 
@@ -516,9 +582,9 @@ else:
     INFRASTRUCTURE=False
 
 if APPLICATION:
-	INITIAL_PARENT_HOSTGROUP = ""									# Change this variable to your desired application parent host group
+	INITIAL_PARENT_HOSTGROUP = "hg-application"
 if INFRASTRUCTURE:
-	INITIAL_PARENT_HOSTGROUP = ""									# Change this variable to your desired infrastructure parent host group
+	INITIAL_PARENT_HOSTGROUP = "hg-infrastructure"
 
 if VERBOSE:
     print log.SUMM + "### Verbose output ###" + log.END
@@ -545,10 +611,10 @@ if not verify_organization(ORGANIZATION):
 if not verify_location(LOCATION):
 	print log.ERROR + "ERROR: Please verify that your location is configured properly on Satellite." + log.END
 	sys.exit(1)
-	
+
 ## Verify lifecycle environment
 if not verify_lifecycle(ENVIRONMENT):
-        print log.ERROR + "ERROR: Please verify that the lifecycle environment " + ENVIRONMENT + " is configured properly on Satellite." + log.END
+	print log.ERROR + "ERROR: Please verify that the lifecycle environment " + ENVIRONMENT + " is configured properly on Satellite." + log.END
         sys.exit(1)
 
 ## Verify if Satellite hostgroups are present
@@ -569,8 +635,7 @@ else:
 kerberos_destroy_ticket()
 
 if not os.path.exists(KEYTAB):
-	print log.ERROR + "ERROR: did not find Kerberos keytab " + KEYTAB + ". Please make sure that this file exists before you re-run this scipt."
-	sys.exit(1)
+	get_keytab(PRINCIPAL,KDC,KEYTAB)
 
 # Then get valid Kerberos ticket again
 if not get_kerberos_login_status():
@@ -582,7 +647,7 @@ if not get_kerberos_login_status():
 else:
         print log.INFO + "INFO: Valid Kerberos ticket found." + log.END
 
-# Now lets create needed IPA hostgroup and automember rule
+# Now lets create needed IPA hostgroup
 if not get_ipa_hostgroup(HOSTGROUP) == 0:
 	print log.WARN + "WARNING: did not find hostgroup " + HOSTGROUP + " on IPA. Will create it now." + log.END
 	create_ipa_hostgroup(HOSTGROUP)
@@ -592,15 +657,32 @@ else:
 	print log.INFO + "INFO: hostgroup " + HOSTGROUP + " found in IPA." + log.END
 
 ##### Now lets create a new host
-#verify_hostname(CLIENT_FQDN)
+
+# Create custom host partition table
+if options.partitioning:
+	PARTITIONS = str(options.partitioning).split(';')
+	create_partitioning_table_header()
+
+	for entry in PARTITIONS:
+		mount= entry.split(':')[0]
+		size = entry.split(':')[1] 
+		create_partitioning_table(mount,size)
+
+	create_partitioning_table_eof()
+
+	# Now upload the hosts partitioning table to Satellite
+	upload_partitioning_table()
+
+	# Assign the hosts partitioning table 
+	assign_os_to_partitioning_table()
+
+	# Afterwards we can delete the partitioning table locally
+	delete_partitioning_table()
 
 if not verify_hostname(CLIENT_FQDN):
 	if (options.client_fqdn and options.create_host):
-		create_new_host(HOSTNAME,ORGANIZATION,LOCATION,HOSTGROUP,PARTITIONING,PUPPET_ENV_ID)
+		create_new_host(HOSTNAME,ORGANIZATION,LOCATION,HOSTGROUP,PUPPET_ENV_ID)
 		get_host_iso()
-	else:
-		print log.ERROR + "ERROR: Please see usage of this script: ./satellite6-automation.py --help. It seems that you did not pass the minimum of parameters to this script." + log.END
-		sys.exit(1)
 else:
-	print log.INFO + "INFO: host " + CLIENT_FQDN + " is already present on Satellite. Maybe you want to update the host? If yes, please run this script again with option --update-host instead of --create-host."
+	print log.INFO + "INFO: host " + CLIENT_FQDN + " is already present on Satellite. Maybe you want to update the host? If yes, please run this script again with option --update-host instead of --create-host." + log.END
 
