@@ -445,7 +445,7 @@ parser.add_option("--client-fqdn", dest="client_fqdn", help="FQDN of the client 
 parser.add_option("--location", dest="location", help="Label of the Location in Satellite that the host is to be associated with", metavar="LOCATION")
 parser.add_option("--application-id", dest="application_id", help="Application ID as basis for the hostgroup the client should be assigned to", metavar="APPLICATION_ID")
 parser.add_option("--environment", dest="environment", help="Environment should be one of dev/test/preprod/prod", metavar="ENVIRONMENT")
-parser.add_option("--partitioning", dest="partitioning", help="Customized partitioning table", metavar="PARTITIONING")
+parser.add_option("--partitioning", dest="partitioning", help="Customized partitioning table separated by ';' => /<mountpoint>:<size_in_gb>", metavar="PARTITIONING")
 parser.add_option("--primary-nic-ip", dest="primary_nic_ip", help="IP address of the primary/public network interface", metavar="PRIMARY_NIC_IP")
 parser.add_option("--primary-nic-mask", dest="primary_nic_mask", help="Subnet mask of primary/public network interface", metavar="PRIMARY_NIC_MASK")
 parser.add_option("--primary-nic-gateway", dest="primary_nic_gateway", help="Gateway of primary/public network interface", metavar="PRIMARY_NIC_GATEWAY")
@@ -470,7 +470,7 @@ parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="
 if not (( options.client_fqdn and options.create_host ) or ( options.client_fqdn and options.update_host )):
     print log.ERROR + "You must specify at least client fqdn and if you want to create a new host (--create-host) or update a host (--update-host). See usage:\n" + log.END
     parser.print_help()
-    print "\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host"
+    print '\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host --partitioning "/:2;/tmp:3;/usr:2;/var:2;/var/log:4;/var/log/audit:4;/data:3;/data/backups:1;/data/log:4;/data/spool:4;/garbage:1;/home:1;/opt:2;/usr/local:1;/my_custom_mount:1" --intranet -location DE-HAM --application-id 12345 --environment prod --application --primary-nic-ip 192.168.100.130 --primary-nic-mac 00:00:00:00:00:40 --primary-nic-mask 255.255.255.0 --primary-nic-gateway 192.168.100.1 --secondary-nic-ip 192.168.111.130 --secondary-nic-mac 00:00:00:00:00:41 --secondary-nic-mask 255.255.255.0 --secondary-nic-gateway 192.168.111.1 --third-nic-ip 192.168.122.130 --third-nic-mac 00:00:00:00:00:42 --third-nic-mask 255.255.255.0 --third-nic-gateway 192.168.122.1'
     sys.exit(1)
 else:
     SAT6_FQDN = options.sat6_fqdn
@@ -492,7 +492,7 @@ else:
     PUPPET_ENV_ID = get_environment_id(DEFAULT_CONTENT_VIEW)
     PRINCIPAL = ""                                                                          # Change this variable to your IPA automation service user name
     KDC = ""                                                                                # Change this variable to one of your IPA servers
-    KEYTAB = "/home/"+PRINCIPAL+/PRINCIPAL".keytab"
+    KEYTAB = "/home/"+PRINCIPAL+"/"+PRINCIPAL+".keytab"
     NFS_HOST_ISO_STORE = ""                                                                 # Change this variable to your NFS mount where you want to store host iso images
     DNS_PRIMARY = ""                                                                        # Change this variable to your primary DNS server
 
