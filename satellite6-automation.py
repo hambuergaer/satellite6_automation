@@ -458,6 +458,7 @@ parser.add_option("--third-nic-ip", dest="third_nic_ip", help="IP address of the
 parser.add_option("--third-nic-mask", dest="third_nic_mask", help="Subnet mask of the database replication network interface", metavar="THIRD_NIC_MASK")
 parser.add_option("--third-nic-gateway", dest="third_nic_gateway", help="Gateway of the database replication network interface", metavar="THIRD_NIC_GATEWAY")
 parser.add_option("--third-nic-mac", dest="third_nic_mac", help="MAC address of the database replication network interface", metavar="THIRD_NIC_MAC")
+parser.add_option("--trange", dest="trange", help="Trange where you want to add your host [tr01 / tr02] ", metavar="TRANGE")
 parser.add_option("--create-host", dest="create_host", action="store_true", help="Create new host")
 parser.add_option("--update-host", dest="update_host", action="store_true", help="Update existing host")
 parser.add_option("--intranet", dest="intranet", action="store_true", help="Host should be placed in INTRANET")
@@ -473,6 +474,11 @@ if not (( options.client_fqdn and options.create_host ) or ( options.client_fqdn
     print '\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host --partitioning "/:2;/tmp:3;/usr:2;/var:2;/var/log:4;/var/log/audit:4;/data:3;/data/backups:1;/data/log:4;/data/spool:4;/garbage:1;/home:1;/opt:2;/usr/local:1;/my_custom_mount:1" --intranet -location DE-HAM --application-id 12345 --environment prod --application --primary-nic-ip 192.168.100.130 --primary-nic-mac 00:00:00:00:00:40 --primary-nic-mask 255.255.255.0 --primary-nic-gateway 192.168.100.1 --secondary-nic-ip 192.168.111.130 --secondary-nic-mac 00:00:00:00:00:41 --secondary-nic-mask 255.255.255.0 --secondary-nic-gateway 192.168.111.1 --third-nic-ip 192.168.122.130 --third-nic-mac 00:00:00:00:00:42 --third-nic-mask 255.255.255.0 --third-nic-gateway 192.168.122.1'
     sys.exit(1)
 else:
+    if options.trange == "tr01" or options.trange == "tr02" :
+        TRANGE=options.trange
+    else:
+        print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
+        sys.exit(1)
     SAT6_FQDN = options.sat6_fqdn
     CLIENT_FQDN = options.client_fqdn
     HOSTNAME = CLIENT_FQDN.split(".")[0]
@@ -483,7 +489,7 @@ else:
     ENVIRONMENT = str(options.environment)
     PARTITIONING = options.partitioning
     PARENT_HOSTGROUP = "hg-"+APPLICATION_ID
-    HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT)
+    HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT+"-"+TRANGE)
     REALM = ""                                                                              # Change this variable to your IPA Realm
     ARCHITECTURE = "x86_64"
     OS = ""                                                                                 # Change this variable to your default operating system name in Satellite

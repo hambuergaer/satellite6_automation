@@ -31,7 +31,7 @@ This script
 
 If you pass the option "--application" to the script it creates child hostgroups as follows:
 ```
-hg-application ==> hg-<application> ==> hg-<application>-<lifecycle-environment>
+hg-application ==> hg-<application> ==> hg-<application>-<lifecycle-environment>-<trange>
 ```											
 If you pass the option "--infrastructure" to the script it creates child hostgroups as follows:
 ```
