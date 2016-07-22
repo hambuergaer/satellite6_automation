@@ -35,7 +35,7 @@ hg-application ==> hg-<application> ==> hg-<application>-<lifecycle-environment>
 ```											
 If you pass the option "--infrastructure" to the script it creates child hostgroups as follows:
 ```
-hg-infrastructure ==> hg-<application> ==> hg-<application>-<lifecycle-environment>
+hg-infrastructure ==> hg-<application> ==> hg-<application>-<lifecycle-environment>-<trange>
 ```
 - creates Satellite subnets according to your host`s network information you pass to this script (if not already present)
 - downloads host iso images for provisioning to a mounted NFS volume on Satellite
@@ -50,7 +50,13 @@ hg-<application>-<lifecycle-environment>
 - creates custom host partitioning table and uploads it to Satellite. Furthermore it assigns the parttition table to your host and to the default operating system defined in this script.
 
 #Prerequisites:
-### 1. Create IPA automation service user on IPA server
+### 1. Package installations
+Install the following package on a host which has a connection to Satellite and IPA which you want to use for automation purposes:
+```
+yum install -y rubygem-hammer_cli_foreman ipa-admintools
+```
+
+### 2. Create IPA automation service user on IPA server
 - Login as an IPA admin user:
 ```
 kinit admin
@@ -95,7 +101,7 @@ ipa role-add-privilege "IPA Automation" --privileges="Automember Readers" --priv
 ipa role-add-member "IPA Automation" --users="svc-ipa-automation"
 ```
 
-### 2. Create Satellite automation service user on IPA server
+### 3. Create Satellite automation service user on IPA server
 - Create the service user:
 ```
 ipa user-add --first="Satellite Automation" --last="Service user" --displayname="svc-satellite-automation" --password svc-satellite-automation
@@ -113,7 +119,7 @@ ipa hbacrule-add-user allow_svc-satellite-automation_on_satellite --users=svc-sa
 ipa hbacrule-add-host allow_svc-satellite-automation_on_satellite --hosts=<your-satellite-server>
 ```
 
-### 3. On Satellite
+### 4. On Satellite
 - Install IPA client on Satellite 6 server and configure it accordingly to authenticate your Satellite 6 server against IPA server
 - Install IPA admin tools:
 ```
@@ -230,6 +236,6 @@ Administer -> Settings -> Provisioning -> root_pass
 **Please replace the variable names according to your setup.**
 - Copy the Kerberos keytab "svc-ipa-automation.keytab" you created in chapter 1. to svc-satellite-automation home directory.
 
-### 4. Change hardcoded variables in this script according to your needs
+### 5. Change hardcoded variables in this script according to your needs
 - Open the script and search for **"# Change this variable"**.
 - Change all variables according to your needs or create an option for this variable to pass by this script as an argument.
