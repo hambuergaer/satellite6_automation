@@ -14,15 +14,16 @@ On **IPA** you need a service user which you will use wihtin this script to inte
 - Creation Date: 2016-06-23
 
 # Table of content
-* [Description](#description)
-* [About this script](#about-this-script)
-* [Table of content](#table-of-content)
-* [Features](#features)
-* [Prerequisites:](#prerequisites)
-    * [1. Create IPA automation service user on IPA server](#1-create-ipa-automation-service-user-on-ipa-server)
-    * [2. Create Satellite automation service user on IPA server](#2-create-satellite-automation-service-user-on-ipa-server)
-    * [3. On Satellite](#3-on-satellite)
-    * [4. Change hardcoded variables in this script according to your needs](#4-change-hardcoded-variables-in-this-script-according-to-your-needs)
+  * [Description](#description)
+  * [About this script](#about-this-script)
+  * [Table of content](#table-of-content)
+  * [Features](#features)
+  * [Prerequisites:](#prerequisites)
+      * [1. Package installations](#1-package-installations)
+      * [2. Create IPA automation service user on IPA server](#2-create-ipa-automation-service-user-on-ipa-server)
+      * [3. Create Satellite automation service user on IPA server](#3-create-satellite-automation-service-user-on-ipa-server)
+      * [4. On Satellite](#4-on-satellite)
+      * [5. Change hardcoded variables in this script according to your needs](#5-change-hardcoded-variables-in-this-script-according-to-your-needs)
 
 # Features
 This script 
