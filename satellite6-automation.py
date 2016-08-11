@@ -269,9 +269,8 @@ def get_host_iso():
                 print log.ERROR + "ERROR: could not download host iso from satellite to " + NFS_HOST_ISO_STORE + log.END
                 sys.exit(1)
 
-def get_subnet_id(ip):
-	GET_SUBNET = str(ip).split(".")
-	SUBNET = str(GET_SUBNET[0]+"."+GET_SUBNET[1]+"."+GET_SUBNET[2] + ".0")
+def get_subnet_id(network):
+	SUBNET = str(network)
         cmd_get_subnet_id = hammer_cmd + " --csv subnet list"
         try:
                 perform_cmd = subprocess.Popen(cmd_get_subnet_id, shell=True, stdout=subprocess.PIPE)
@@ -285,9 +284,8 @@ def get_subnet_id(ip):
                 print log.ERROR + "ERROR: subnet id not found. Please ensure that the needed subnet " + SUBNET + " is configured properly in Satellite." + log.END
                 sys.exit(1)
 
-def verify_subnet(ip):
-	GET_SUBNET = str(ip).split(".")
-	SUBNET = str(GET_SUBNET[0]+"."+GET_SUBNET[1]+"."+GET_SUBNET[2] + ".0")
+def verify_subnet(network):
+	SUBNET = str(network)
         cmd_verify_subnet = hammer_cmd + " --csv subnet list"
         try:
                 perform_cmd = subprocess.Popen(cmd_verify_subnet, shell=True, stdout=subprocess.PIPE)
@@ -300,9 +298,8 @@ def verify_subnet(ip):
         except:
                 print log.ERROR + "ERROR: subnet not found. Please ensure that the needed subnet " + SUBNET + " is configured properly in Satellite." + log.END
 
-def create_subnet(ip,mask,gateway):
-	GET_SUBNET = str(ip).split(".")
-	SUBNET = str(GET_SUBNET[0]+"."+GET_SUBNET[1]+"."+GET_SUBNET[2] + ".0")
+def create_subnet(network,mask,gateway):
+	SUBNET = str(network)
         cmd_create_subnet = hammer_cmd + " subnet create --boot-mode Static --domains " + DOMAIN + " --locations " + LOCATION + " --name " + SUBNET + " --network " + SUBNET + " --mask " + mask + " --gateway " + gateway +" --organizations " + ORGANIZATION + " --dns-primary " + DNS_PRIMARY + " --ipam None"
         try:
                 perform_cmd = subprocess.Popen(cmd_create_subnet, shell=True, stdout=subprocess.PIPE)
@@ -445,19 +442,22 @@ parser.add_option("--client-fqdn", dest="client_fqdn", help="FQDN of the client 
 parser.add_option("--location", dest="location", help="Label of the Location in Satellite that the host is to be associated with", metavar="LOCATION")
 parser.add_option("--application-id", dest="application_id", help="Application ID as basis for the hostgroup the client should be assigned to", metavar="APPLICATION_ID")
 parser.add_option("--environment", dest="environment", help="Environment should be one of dev/test/preprod/prod", metavar="ENVIRONMENT")
-parser.add_option("--partitioning", dest="partitioning", help="Customized partitioning table separated by ';' => /<mountpoint>:<size_in_gb>", metavar="PARTITIONING")
+parser.add_option("--partitioning", dest="partitioning", help="Customized partitioning table", metavar="PARTITIONING")
 parser.add_option("--primary-nic-ip", dest="primary_nic_ip", help="IP address of the primary/public network interface", metavar="PRIMARY_NIC_IP")
 parser.add_option("--primary-nic-mask", dest="primary_nic_mask", help="Subnet mask of primary/public network interface", metavar="PRIMARY_NIC_MASK")
 parser.add_option("--primary-nic-gateway", dest="primary_nic_gateway", help="Gateway of primary/public network interface", metavar="PRIMARY_NIC_GATEWAY")
 parser.add_option("--primary-nic-mac", dest="primary_nic_mac", help="MAC address of the primary/public network interface", metavar="PRIMARY_NIC_MAC")
+parser.add_option("--primary-nic-network", dest="primary_nic_network", help="Network of the primary/public network interface", metavar="PRIMARY_NIC_NETWORK")
 parser.add_option("--secondary-nic-ip", dest="secondary_nic_ip", help="IP address of the inguest storage network interface", metavar="SECONDARY_NIC_IP")
 parser.add_option("--secondary-nic-mask", dest="secondary_nic_mask", help="Subnet mask of the inguest storage network interface", metavar="SECONDARY_NIC_MASK")
 parser.add_option("--secondary-nic-gateway", dest="secondary_nic_gateway", help="Gateway of the inguest storage network interface", metavar="SECONDARY_NIC_GATEWAY")
 parser.add_option("--secondary-nic-mac", dest="secondary_nic_mac", help="MAC address of the inguest storage network interface", metavar="SECONDARY_NIC_MAC")
+parser.add_option("--secondary-nic-network", dest="secondary_nic_network", help="Network of the inguest storage network interface", metavar="SECONDARY_NIC_NETWORK")
 parser.add_option("--third-nic-ip", dest="third_nic_ip", help="IP address of the database replication network interface", metavar="THIRD_NIC_IP")
 parser.add_option("--third-nic-mask", dest="third_nic_mask", help="Subnet mask of the database replication network interface", metavar="THIRD_NIC_MASK")
 parser.add_option("--third-nic-gateway", dest="third_nic_gateway", help="Gateway of the database replication network interface", metavar="THIRD_NIC_GATEWAY")
 parser.add_option("--third-nic-mac", dest="third_nic_mac", help="MAC address of the database replication network interface", metavar="THIRD_NIC_MAC")
+parser.add_option("--third-nic-network", dest="third_nic_network", help="Network address of the database replication network interface", metavar="THIRD_NIC_NETWORK")
 parser.add_option("--trange", dest="trange", help="Trange where you want to add your host [tr01 / tr02] ", metavar="TRANGE")
 parser.add_option("--create-host", dest="create_host", action="store_true", help="Create new host")
 parser.add_option("--update-host", dest="update_host", action="store_true", help="Update existing host")
@@ -471,44 +471,45 @@ parser.add_option("-v", "--verbose", dest="verbose", action="store_true", help="
 if not (( options.client_fqdn and options.create_host ) or ( options.client_fqdn and options.update_host )):
     print log.ERROR + "You must specify at least client fqdn and if you want to create a new host (--create-host) or update a host (--update-host). See usage:\n" + log.END
     parser.print_help()
-    print '\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host --partitioning "/:2;/tmp:3;/usr:2;/var:2;/var/log:4;/var/log/audit:4;/data:3;/data/backups:1;/data/log:4;/data/spool:4;/garbage:1;/home:1;/opt:2;/usr/local:1;/my_custom_mount:1" --intranet -location DE-HAM --application-id 12345 --environment prod --application --primary-nic-ip 192.168.100.130 --primary-nic-mac 00:00:00:00:00:40 --primary-nic-mask 255.255.255.0 --primary-nic-gateway 192.168.100.1 --secondary-nic-ip 192.168.111.130 --secondary-nic-mac 00:00:00:00:00:41 --secondary-nic-mask 255.255.255.0 --secondary-nic-gateway 192.168.111.1 --third-nic-ip 192.168.122.130 --third-nic-mac 00:00:00:00:00:42 --third-nic-mask 255.255.255.0 --third-nic-gateway 192.168.122.1'
+    print "\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host"
     sys.exit(1)
 else:
     if options.trange == "tr01" or options.trange == "tr02" :
-        TRANGE=options.trange
+	TRANGE=options.trange
     else:
-        print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
-        sys.exit(1)
+	print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
+	sys.exit(1)
     SAT6_FQDN = options.sat6_fqdn
     CLIENT_FQDN = options.client_fqdn
     HOSTNAME = CLIENT_FQDN.split(".")[0]
     DOMAIN = CLIENT_FQDN.split(".")[1]+"."+CLIENT_FQDN.split(".")[2]
-    ORGANIZATION  = ""                                                                      # Change this variable according to your needs
+    ORGANIZATION  = ""											# Change this variable according to your needs
     LOCATION  = options.location
     APPLICATION_ID = str(options.application_id)
     ENVIRONMENT = str(options.environment)
     PARTITIONING = options.partitioning
     PARENT_HOSTGROUP = "hg-"+APPLICATION_ID
     HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT+"-"+TRANGE)
-    REALM = ""                                                                              # Change this variable to your IPA Realm
+    REALM = ""												# Change this variable to your IPA Realm
     ARCHITECTURE = "x86_64"
-    OS = ""                                                                                 # Change this variable to your default operating system name in Satellite
-    DEFAULT_CONTENT_VIEW = ""                                                               # Change this variable to your Satellite default (composite) content view
-    DEFAULT_ACTIVATION_KEY = ""                                                             # Change this variable to your Satellite default activation key you want to use for host registration 
+    OS = ""												# Change this variable to your default operating system name in Satellite
+    DEFAULT_CONTENT_VIEW = ""										# Change this variable to your Satellite default (composite) content view
+    DEFAULT_ACTIVATION_KEY = ""										# Change this variable to your Satellite default activation key you want to use for host registration
     PUPPET_ENV_ID = get_environment_id(DEFAULT_CONTENT_VIEW)
-    PRINCIPAL = ""                                                                          # Change this variable to your IPA automation service user name
-    KDC = ""                                                                                # Change this variable to one of your IPA servers
-    KEYTAB = "/home/"+PRINCIPAL+"/"+PRINCIPAL+".keytab"
-    NFS_HOST_ISO_STORE = ""                                                                 # Change this variable to your NFS mount where you want to store host iso images
-    DNS_PRIMARY = ""                                                                        # Change this variable to your primary DNS server
+    PRINCIPAL = ""											# Change this variable to your IPA automation service user name
+    KDC = ""												# Change this variable to one of your IPA servers
+    KEYTAB = "/home/svc-satellite-automation/"+PRINCIPAL+".keytab"					# Change this variable to the path to your principals Kerberos keytab file
+    NFS_HOST_ISO_STORE = ""										# Change this variable to your NFS mount where you want to store host iso images
+    DNS_PRIMARY = ""											# Change this variable to your primary DNS server
 
 if options.primary_nic_ip:
     PRIMARY_NIC_IP = str(options.primary_nic_ip)
     PRIMARY_NIC_MASK = str(options.primary_nic_mask)	
-    PRIMARY_NIC_GATEWAY = str(options.primary_nic_gateway) 
-    if not verify_subnet(PRIMARY_NIC_IP):
-	create_subnet(PRIMARY_NIC_IP,PRIMARY_NIC_MASK,PRIMARY_NIC_GATEWAY)
-    SUBNET_ID_PRIMARY_NIC = get_subnet_id(PRIMARY_NIC_IP)
+    PRIMARY_NIC_GATEWAY = str(options.primary_nic_gateway)
+    PRIMARY_NIC_NETWORK = str(options.primary_nic_network)
+    if not verify_subnet(PRIMARY_NIC_NETWORK):
+	create_subnet(PRIMARY_NIC_NETWORK,PRIMARY_NIC_MASK,PRIMARY_NIC_GATEWAY)
+    SUBNET_ID_PRIMARY_NIC = get_subnet_id(PRIMARY_NIC_NETWORK)
 else:
     PRIMARY_NIC_IP = None
     SUBNET_ID_PRIMARY_NIC = None
@@ -522,9 +523,10 @@ if options.secondary_nic_ip:
     SECONDARY_NIC_IP = str(options.secondary_nic_ip)
     SECONDARY_NIC_MASK = str(options.secondary_nic_mask)	
     SECONDARY_NIC_GATEWAY = str(options.secondary_nic_gateway) 
-    if not verify_subnet(SECONDARY_NIC_IP):
-	create_subnet(SECONDARY_NIC_IP,SECONDARY_NIC_MASK,SECONDARY_NIC_GATEWAY)
-    SUBNET_ID_SECONDARY_NIC = get_subnet_id(SECONDARY_NIC_IP)
+    SECONDARY_NIC_NETWORK = str(options.secondary_nic_network) 
+    if not verify_subnet(SECONDARY_NIC_NETWORK):
+	create_subnet(SECONDARY_NIC_NETWORK,SECONDARY_NIC_MASK,SECONDARY_NIC_GATEWAY)
+    SUBNET_ID_SECONDARY_NIC = get_subnet_id(SECONDARY_NIC_NETWORK)
 else:
     SECONDARY_NIC_IP = None     
     SUBNET_ID_SECONDARY_NIC = None
@@ -537,9 +539,10 @@ if options.third_nic_ip:
     THIRD_NIC_IP = str(options.third_nic_ip)
     THIRD_NIC_MASK = str(options.third_nic_mask)	
     THIRD_NIC_GATEWAY = str(options.third_nic_gateway) 
-    if not verify_subnet(THIRD_NIC_IP):
-	create_subnet(THIRD_NIC_IP,THIRD_NIC_MASK,THIRD_NIC_GATEWAY)
-    SUBNET_ID_THIRD_NIC = get_subnet_id(THIRD_NIC_IP)
+    THIRD_NIC_NETWORK = str(options.third_nic_network) 
+    if not verify_subnet(THIRD_NIC_NETWORK):
+	create_subnet(THIRD_NIC_NETWORK,THIRD_NIC_MASK,THIRD_NIC_GATEWAY)
+    SUBNET_ID_THIRD_NIC = get_subnet_id(THIRD_NIC_NETWORK)
 else:
     THIRD_NIC_IP = None
     SUBNET_ID_THIRD_NIC = None
@@ -565,17 +568,23 @@ else:
 
 if options.intranet:
     INTRANET=True
-    PUPPET_PROXY = "dehamsl1204.int.kn"                                                     # Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = "dehamsl1204.int.kn"                                                  # Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = ""											# Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = ""										# Change this variable to your Satellite or Capsule server
 else:
     INTRANET=False
 
 if options.dmz:
     DMZ=True
-    PUPPET_PROXY = "dehamsl1204.int.kn"                                                     # Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = "dehamsl1204.int.kn"                                                  # Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = ""											# Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = ""										# Change this variable to your Satellite or Capsule server
 else:
     DMZ=False
+
+if options.trange == "tr01" or options.trange == "tr02" :
+   TRANGE=options.trange
+else:
+   print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
+   sys.exit(1)
 
 if options.application:
     APPLICATION=True
@@ -588,9 +597,9 @@ else:
     INFRASTRUCTURE=False
 
 if APPLICATION:
-	INITIAL_PARENT_HOSTGROUP = "hg-application"
+    INITIAL_PARENT_HOSTGROUP = "hg-application"
 if INFRASTRUCTURE:
-	INITIAL_PARENT_HOSTGROUP = "hg-infrastructure"
+    INITIAL_PARENT_HOSTGROUP = "hg-infrastructure"
 
 if VERBOSE:
     print log.SUMM + "### Verbose output ###" + log.END
