@@ -284,22 +284,22 @@ def get_subnet_id(network):
                 print log.ERROR + "ERROR: subnet id not found. Please ensure that the needed subnet " + SUBNET + " is configured properly in Satellite." + log.END
                 sys.exit(1)
 
-def verify_subnet(network):
-	SUBNET = str(network)
-        cmd_verify_subnet = hammer_cmd + " --csv subnet list"
+def verify_subnet(subnet):
+	#SUBNET = str(network)
+        #cmd_verify_subnet = hammer_cmd + " --csv subnet list"
         try:
                 perform_cmd = subprocess.Popen(cmd_verify_subnet, shell=True, stdout=subprocess.PIPE)
                 subnet_id = perform_cmd.stdout.read()
-                for line in  islice(subnet_id.strip().split("\n"), 1, None):        # print output without CSV header
-                        if SUBNET in line:
+                for line in islice(subnet_id.strip().split("\n"), 1, None):        # print output without CSV header
+                        if subnet in line:
                                 return True
 				break
 
         except:
-                print log.ERROR + "ERROR: subnet not found. Please ensure that the needed subnet " + SUBNET + " is configured properly in Satellite." + log.END
+                print log.ERROR + "ERROR: subnet not found. Please ensure that the needed subnet " + subnet + " is configured properly in Satellite." + log.END
 
-def create_subnet(network,mask,gateway):
-	SUBNET = str(network)
+def create_subnet(subnet,mask,gateway):
+	SUBNET = str(subnet)
         cmd_create_subnet = hammer_cmd + " subnet create --boot-mode Static --domains " + DOMAIN + " --locations " + LOCATION + " --name " + SUBNET + " --network " + SUBNET + " --mask " + mask + " --gateway " + gateway +" --organizations " + ORGANIZATION + " --dns-primary " + DNS_PRIMARY + " --ipam None"
         try:
                 perform_cmd = subprocess.Popen(cmd_create_subnet, shell=True, stdout=subprocess.PIPE)
@@ -448,6 +448,7 @@ parser.add_option("--primary-nic-mask", dest="primary_nic_mask", help="Subnet ma
 parser.add_option("--primary-nic-gateway", dest="primary_nic_gateway", help="Gateway of primary/public network interface", metavar="PRIMARY_NIC_GATEWAY")
 parser.add_option("--primary-nic-mac", dest="primary_nic_mac", help="MAC address of the primary/public network interface", metavar="PRIMARY_NIC_MAC")
 parser.add_option("--primary-nic-network", dest="primary_nic_network", help="Network of the primary/public network interface", metavar="PRIMARY_NIC_NETWORK")
+parser.add_option("--primary-nic-subnet", dest="primary_nic_subnet", help="Subnet of the primary/public network interface", metavar="PRIMARY_NIC_SUBNET")
 parser.add_option("--secondary-nic-ip", dest="secondary_nic_ip", help="IP address of the inguest storage network interface", metavar="SECONDARY_NIC_IP")
 parser.add_option("--secondary-nic-mask", dest="secondary_nic_mask", help="Subnet mask of the inguest storage network interface", metavar="SECONDARY_NIC_MASK")
 parser.add_option("--secondary-nic-gateway", dest="secondary_nic_gateway", help="Gateway of the inguest storage network interface", metavar="SECONDARY_NIC_GATEWAY")
@@ -507,8 +508,9 @@ if options.primary_nic_ip:
     PRIMARY_NIC_MASK = str(options.primary_nic_mask)	
     PRIMARY_NIC_GATEWAY = str(options.primary_nic_gateway)
     PRIMARY_NIC_NETWORK = str(options.primary_nic_network)
-    if not verify_subnet(PRIMARY_NIC_NETWORK):
-	create_subnet(PRIMARY_NIC_NETWORK,PRIMARY_NIC_MASK,PRIMARY_NIC_GATEWAY)
+    PRIMARY_NIC_SUBNET = str(options.primary_nic_subnet)
+    if not verify_subnet(PRIMARY_NIC_SUBNET):
+	create_subnet(PRIMARY_NIC_SUBNET,PRIMARY_NIC_MASK,PRIMARY_NIC_GATEWAY)
     SUBNET_ID_PRIMARY_NIC = get_subnet_id(PRIMARY_NIC_NETWORK)
 else:
     PRIMARY_NIC_IP = None
