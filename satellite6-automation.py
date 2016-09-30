@@ -493,7 +493,6 @@ else:
     REALM = ""												# Change this variable to your IPA Realm
     ARCHITECTURE = "x86_64"
     OS = ""												# Change this variable to your default operating system name in Satellite
-    DEFAULT_CONTENT_VIEW = ""										# Change this variable to your Satellite default (composite) content view
     DEFAULT_ACTIVATION_KEY = ""										# Change this variable to your Satellite default activation key you want to use for host registration
     PUPPET_ENV_ID = get_environment_id(DEFAULT_CONTENT_VIEW)
     PRINCIPAL = ""											# Change this variable to your IPA automation service user name
@@ -501,6 +500,13 @@ else:
     KEYTAB = "/home/svc-satellite-automation/"+PRINCIPAL+".keytab"					# Change this variable to the path to your principals Kerberos keytab file
     NFS_HOST_ISO_STORE = ""										# Change this variable to your NFS mount where you want to store host iso images
     DNS_PRIMARY = ""											# Change this variable to your primary DNS server
+
+if ( ENVIRONMENT == "dev" ):
+        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-dev"                                                     # Change this variable to your Satellite default activation key for environment "dev" 
+if ( ENVIRONMENT == "test" ):
+        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-test"                                                    # Change this variable to your Satellite default activation key for environment "test" 
+if ( ENVIRONMENT == "prod" ):
+        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-prod"                                                    # Change this variable to your Satellite default activation key for environment "prod" 
 
 if options.primary_nic_ip:
     PRIMARY_NIC_IP = str(options.primary_nic_ip)
