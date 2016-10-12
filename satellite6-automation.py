@@ -458,7 +458,7 @@ parser.add_option("--third-nic-mask", dest="third_nic_mask", help="Subnet mask o
 parser.add_option("--third-nic-gateway", dest="third_nic_gateway", help="Gateway of the database replication network interface", metavar="THIRD_NIC_GATEWAY")
 parser.add_option("--third-nic-mac", dest="third_nic_mac", help="MAC address of the database replication network interface", metavar="THIRD_NIC_MAC")
 parser.add_option("--third-nic-network", dest="third_nic_network", help="Network address of the database replication network interface", metavar="THIRD_NIC_NETWORK")
-parser.add_option("--trange", dest="trange", help="Trange where you want to add your host [tr01 / tr02] ", metavar="TRANGE")
+parser.add_option("--trange", dest="trange", help="Trange where you want to add your host [tr01 / tr02 / tr03] ", metavar="TRANGE")
 parser.add_option("--create-host", dest="create_host", action="store_true", help="Create new host")
 parser.add_option("--update-host", dest="update_host", action="store_true", help="Update existing host")
 parser.add_option("--intranet", dest="intranet", action="store_true", help="Host should be placed in INTRANET")
@@ -474,7 +474,7 @@ if not (( options.client_fqdn and options.create_host ) or ( options.client_fqdn
     print "\nExample usage: ./satellite6-automation.py --client-fqdn client01.example.com --create-host"
     sys.exit(1)
 else:
-    if options.trange == "tr01" or options.trange == "tr02" :
+    if options.trange == "tr01" or options.trange == "tr02" or options.trange == "tr03" :
 	TRANGE=options.trange
     else:
 	print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
@@ -586,7 +586,7 @@ if options.dmz:
 else:
     DMZ=False
 
-if options.trange == "tr01" or options.trange == "tr02" :
+if options.trange == "tr01" or options.trange == "tr02" or options.trange == "tr03":
    TRANGE=options.trange
 else:
    print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
