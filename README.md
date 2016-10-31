@@ -53,8 +53,14 @@ hg-<application>-<lifecycle-environment>
 #Prerequisites:
 ### 1. Package installations
 Install the following package on a host which has a connection to Satellite and IPA which you want to use for automation purposes:
+
+For Satellite 6.1*:
 ```
 yum install -y ipa-admintools rubygem-hammer_cli_csv rubygem-hammer_cli_foreman_bootdisk rubygem-hammer_cli_gutterball rubygem-hammer_cli_foreman_tasks rubygem-hammer_cli_katello rubygem-hammer_cli_foreman rubygem-hammer_cli
+```
+For Satellite 6.2*:
+```
+yum install -y ipa-admintools tfm-rubygem-hammer_cli*
 ```
 
 ### 2. Create IPA automation service user on IPA server
