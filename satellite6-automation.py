@@ -87,8 +87,9 @@ def verify_location(location):
 		for line in  islice(locations.strip().split("\n"), 1, None):	# print output without CSV header
 			if location in line:	
 				return True
-			else:
-				return False
+				break
+			#else:
+			#	return False
 
 	except:
 		print log.ERROR + "ERROR" + log.END
@@ -138,7 +139,7 @@ def verify_hostname(hostname):
 		sys.exit(1)
 
 def create_parent_hostgroup(parenthg,initial_hostgroup):
-	cmd_create_parent_hostgroup = hammer_cmd + " hostgroup create --name " + parenthg + " --parent " + initial_hostgroup + " --organizations " + ORGANIZATION + " --locations " + LOCATION
+	cmd_create_parent_hostgroup = hammer_cmd + " hostgroup create --name " + parenthg + " --parent " + initial_hostgroup + " --organization " + ORGANIZATION + " --locations " + SATELLITE_LOCATIONS
 	try:
 		perform_cmd = subprocess.Popen(cmd_create_parent_hostgroup, shell=True, stdout=subprocess.PIPE)
 		parenthostgroup = perform_cmd.stdout.read()
@@ -163,7 +164,7 @@ def verify_child_hostgroup(childhg):
 		sys.exit(1)
 
 def create_child_hostgroup(childhg,parenthg,puppetenv):
-	cmd_create_child_hostgroup = hammer_cmd + " hostgroup create --name " + childhg + " --parent " + parenthg + " --lifecycle-environment " + ENVIRONMENT + " --organizations " + ORGANIZATION + " --environment-id " + puppetenv + " --locations " + LOCATION
+	cmd_create_child_hostgroup = hammer_cmd + " hostgroup create --name " + childhg + " --parent " + parenthg + " --lifecycle-environment " + ENVIRONMENT + " --organization " + ORGANIZATION + " --environment-id " + puppetenv + " --locations " + SATELLITE_LOCATIONS
 	
 	try:
 		perform_cmd = subprocess.Popen(cmd_create_child_hostgroup, shell=True, stdout=subprocess.PIPE)
@@ -206,7 +207,7 @@ def create_partitioning_table_eof():
 
 def upload_partitioning_table():
 	ptable = "/home/svc-satellite-automation/tmp/"+ HOSTNAME + ".ptable"
-	cmd_upload_ptable = hammer_cmd + " partition-table create --os-family Redhat --name "+ HOSTNAME + "_ptable --file " + ptable
+	cmd_upload_ptable = hammer_cmd + " partition-table create --os-family Redhat --name "+ HOSTNAME + "_ptable --file " + ptable + " --organizations " + ORGANIZATION + " --locations " + LOCATION
 	
 	if os.path.exists(ptable):
 		try:
@@ -434,6 +435,20 @@ def show_ipa_hostgroup(hostgroup):
                 #return IPA_HOSTGROUP_MEMBERS
     return(IPA_HOSTGROUP,IPA_HOSTGROUP_MEMBERS)
 
+def get_locations():
+        cmd_get_locations = hammer_cmd + " --csv location list"
+        try:
+                perform_cmd = subprocess.Popen(cmd_get_locations, shell=True, stdout=subprocess.PIPE)
+                locations = perform_cmd.stdout.read()
+                all_locations = []
+                for line in islice(locations.strip().split("\n"), 1, None):     # print output without CSV header
+                        location = str(line.split(",")[1])
+                        all_locations.append(location)
+                return all_locations
+        except:
+                print log.ERROR + "ERROR" + log.END
+                sys.exit(1)
+
 ################################## OPTIONS PARSER AND VARIABLES ##################################
 
 parser = OptionParser()
@@ -483,30 +498,32 @@ else:
     CLIENT_FQDN = options.client_fqdn
     HOSTNAME = CLIENT_FQDN.split(".")[0]
     DOMAIN = CLIENT_FQDN.split(".")[1]+"."+CLIENT_FQDN.split(".")[2]
-    ORGANIZATION  = ""											# Change this variable according to your needs
+    ORGANIZATION  = ""                                                                                  # Change this variable according to your needs
     LOCATION  = options.location
     APPLICATION_ID = str(options.application_id)
     ENVIRONMENT = str(options.environment)
     PARTITIONING = options.partitioning
     PARENT_HOSTGROUP = "hg-"+APPLICATION_ID
     HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT+"-"+TRANGE)
-    REALM = ""												# Change this variable to your IPA Realm
+    IPA_HOSTGROUP = str("hg-"+APPLICATION_ID+"-"+ENVIRONMENT)
+    REALM = ""                                                                                          # Change this variable to your IPA Realm
     ARCHITECTURE = "x86_64"
-    OS = ""												# Change this variable to your default operating system name in Satellite
-    DEFAULT_ACTIVATION_KEY = ""										# Change this variable to your Satellite default activation key you want to use for host registration
+    OS = ""                                                                                             # Change this variable to your default operating system name in Satellite
+    DEFAULT_CONTENT_VIEW = ""                                                                           # Change this variable to your Satellite default (composite) content view
     PUPPET_ENV_ID = get_environment_id(DEFAULT_CONTENT_VIEW)
-    PRINCIPAL = ""											# Change this variable to your IPA automation service user name
-    KDC = ""												# Change this variable to one of your IPA servers
+    PRINCIPAL = ""                                                                                      # Change this variable to your IPA automation service user name
+    KDC = ""                                                                                            # Change this variable to one of your IPA servers
     KEYTAB = "/home/svc-satellite-automation/"+PRINCIPAL+".keytab"					# Change this variable to the path to your principals Kerberos keytab file
-    NFS_HOST_ISO_STORE = ""										# Change this variable to your NFS mount where you want to store host iso images
-    DNS_PRIMARY = ""											# Change this variable to your primary DNS server
+    NFS_HOST_ISO_STORE = ""                                                                             # Change this variable to your NFS mount where you want to store host iso images
+    DNS_PRIMARY = ""                                                                                    # Change this variable to your primary DNS server
+    SATELLITE_LOCATIONS = ','.join(get_locations())
 
 if ( ENVIRONMENT == "dev" ):
-        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-dev"                                                     # Change this variable to your Satellite default activation key for environment "dev" 
+	DEFAULT_ACTIVATION_KEY = ""                                                                     # Change this variable to your Satellite default activation key for environment "dev" 
 if ( ENVIRONMENT == "test" ):
-        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-test"                                                    # Change this variable to your Satellite default activation key for environment "test" 
+	DEFAULT_ACTIVATION_KEY = ""                                                                     # Change this variable to your Satellite default activation key for environment "test" 
 if ( ENVIRONMENT == "prod" ):
-        DEFAULT_ACTIVATION_KEY = "act-os-rhel7-prod"                                                    # Change this variable to your Satellite default activation key for environment "prod" 
+	DEFAULT_ACTIVATION_KEY = ""                                                                     # Change this variable to your Satellite default activation key for environment "prod" 
 
 if options.primary_nic_ip:
     PRIMARY_NIC_IP = str(options.primary_nic_ip)
@@ -574,19 +591,19 @@ else:
 
 if options.intranet:
     INTRANET=True
-    PUPPET_PROXY = ""											# Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = ""										# Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = ""                                                                                   # Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = ""                                                                                # Change this variable to your Satellite or Capsule server
 else:
     INTRANET=False
 
 if options.dmz:
     DMZ=True
-    PUPPET_PROXY = ""											# Change this variable to your Satellite or Capsule server
-    PUPPET_CA_PROXY = ""										# Change this variable to your Satellite or Capsule server
+    PUPPET_PROXY = ""                                                                                   # Change this variable to your Satellite or Capsule server
+    PUPPET_CA_PROXY = ""                                                                                # Change this variable to your Satellite or Capsule server
 else:
     DMZ=False
 
-if options.trange == "tr01" or options.trange == "tr02" or options.trange == "tr03":
+if options.trange == "tr01" or options.trange == "tr02" or options.trange == "tr03" :
    TRANGE=options.trange
 else:
    print log.ERROR + "ERROR: you need to define the trange where you want to assign your host. See usage." + log.END
@@ -669,13 +686,13 @@ else:
         print log.INFO + "INFO: Valid Kerberos ticket found." + log.END
 
 # Now lets create needed IPA hostgroup
-if not get_ipa_hostgroup(HOSTGROUP) == 0:
-	print log.WARN + "WARNING: did not find hostgroup " + HOSTGROUP + " on IPA. Will create it now." + log.END
-	create_ipa_hostgroup(HOSTGROUP)
-	create_ipa_automember_rule(HOSTGROUP)
-	create_ipa_automember_rule_condition(HOSTGROUP)
+if not get_ipa_hostgroup(IPA_HOSTGROUP) == 0:
+	print log.WARN + "WARNING: did not find hostgroup " + IPA_HOSTGROUP + " on IPA. Will create it now." + log.END
+	create_ipa_hostgroup(IPA_HOSTGROUP)
+	create_ipa_automember_rule(IPA_HOSTGROUP)
+	create_ipa_automember_rule_condition(IPA_HOSTGROUP)
 else:
-	print log.INFO + "INFO: hostgroup " + HOSTGROUP + " found in IPA." + log.END
+	print log.INFO + "INFO: hostgroup " + IPA_HOSTGROUP + " found in IPA." + log.END
 
 ##### Now lets create a new host
 
