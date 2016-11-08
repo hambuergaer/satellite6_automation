@@ -301,7 +301,7 @@ def verify_subnet(network):
 
 def create_subnet(network,mask,gateway):
 	SUBNET = str(network)
-        cmd_create_subnet = hammer_cmd + " subnet create --boot-mode Static --domains " + DOMAIN + " --locations " + LOCATION + " --name " + SUBNET + " --network " + SUBNET + " --mask " + mask + " --gateway " + gateway +" --organizations " + ORGANIZATION + " --dns-primary " + DNS_PRIMARY + " --ipam None"
+        cmd_create_subnet = hammer_cmd + " subnet create --boot-mode Static --domains " + DOMAIN + " --locations " + SATELLITE_LOCATIONS + " --name " + SUBNET + " --network " + SUBNET + " --mask " + mask + " --gateway " + gateway +" --organizations " + ORGANIZATION + " --dns-primary " + DNS_PRIMARY + " --ipam None"
         try:
                 perform_cmd = subprocess.Popen(cmd_create_subnet, shell=True, stdout=subprocess.PIPE)
                 subnet_id = perform_cmd.stdout.read()
