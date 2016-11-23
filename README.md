@@ -180,6 +180,7 @@ hammer role create --name "Satellite automation Domain"
 hammer role create --name "Satellite automation SmartProxy"
 hammer role create --name "Satellite automation ComputeResource"
 hammer role create --name "Satellite automation Partition tables"
+hammer role create --name "Satellite automation Repository sync"
 
 hammer filter create --permissions view_subnets,create_subnets,edit_subnets --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Subnets"
 hammer filter create --permissions view_hostgroups,create_hostgroups,edit_hostgroups --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Hostgroups"
@@ -195,11 +196,12 @@ hammer filter create --permissions view_activation_keys --role "Satellite automa
 hammer filter create --permissions view_realms --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Realm"
 hammer filter create --permissions view_operatingsystems --role "Satellite automation Operatingsystem"
 hammer filter create --permissions view_foreman_tasks --role "Satellite automation ForemanTask"
-hammer filter create --permissions view_content_views,publish_content_views,promote_or_remove_content_views --role "Satellite automation Contentview"
+hammer filter create --permissions view_content_views,publish_content_views,promote_or_remove_content_views,edit_content_views --role "Satellite automation Contentview"
 hammer filter create --permissions view_domains --role "Satellite automation Domain"
 hammer filter create --permissions view_smart_proxies,view_smart_proxies_autosign --role "Satellite automation SmartProxy"
 hammer filter create --permissions view_compute_resources,view_compute_resources_vms --role "Satellite automation Domain"
 hammer filter create --permissions view_ptables,create_ptables,edit_ptables,destroy_ptables --role "Satellite automation Partition tables"
+hammer filter create --permissions sync_products,view_products --role "Satellite automation Repository sync"
 
 hammer user add-role --login svc-satellite-automation --role "Satellite automation Subnets"
 hammer user add-role --login svc-satellite-automation --role "Satellite automation Hostgroups"
@@ -220,6 +222,8 @@ hammer user add-role --login svc-satellite-automation --role "Satellite automati
 hammer user add-role --login svc-satellite-automation --role "Satellite automation SmartProxy"
 hammer user add-role --login svc-satellite-automation --role "Satellite automation Domain"
 hammer user add-role --login svc-satellite-automation --role "Satellite automation Partition tables"
+hammer user add-role --login svc-satellite-automation --role "Satellite automation Repository sync"
+
 ```
 **Please replace the variable names according to your setup.**
 - Create parent hostgroups for applications as well as infrastructure services:
