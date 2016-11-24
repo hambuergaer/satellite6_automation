@@ -449,6 +449,20 @@ def get_locations():
                 print log.ERROR + "ERROR" + log.END
                 sys.exit(1)
 
+def get_operating_system_ids():
+        cmd_get_os_ids = hammer_cmd + " --csv os list"
+        try:
+                perform_cmd = subprocess.Popen(cmd_get_os_ids, shell=True, stdout=subprocess.PIPE)
+                ids = perform_cmd.stdout.read()
+                all_os_ids = []
+                for line in islice(ids.strip().split("\n"), 1, None):   # print output without CSV header
+                        os_id = str(line.split(",")[0])
+                        all_os_ids.append(os_id)
+                return all_os_ids
+        except:
+                print log.ERROR + "ERROR" + log.END
+                sys.exit(1)
+
 ################################## OPTIONS PARSER AND VARIABLES ##################################
 
 parser = OptionParser()
@@ -518,6 +532,7 @@ else:
     NFS_HOST_ISO_STORE = ""                                                                             # Change this variable to your NFS mount where you want to store host iso images
     DNS_PRIMARY = ""                                                                                    # Change this variable to your primary DNS server
     SATELLITE_LOCATIONS = ','.join(get_locations())
+    OPERATING_SYSTEM_IDS = ','.join(get_operating_system_ids())
 
 if ( ENVIRONMENT == "dev" ):
 	DEFAULT_ACTIVATION_KEY = ""                                                                     # Change this variable to your Satellite default activation key for environment "dev" 
