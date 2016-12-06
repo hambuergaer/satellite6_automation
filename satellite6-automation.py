@@ -175,9 +175,9 @@ def create_child_hostgroup(childhg,parenthg,puppetenv):
 		sys.exit(1)
 
 def create_partitioning_table(mountpoint,size):
-	default_mountpoints = ['/','/tmp','/usr','/var','/var/log','/var/log/audit']
-	default_volume_group = "vg_system"
-	application_volume_group = "vg_data"
+	default_mountpoints = ['/','/tmp','/usr','/usr/local','/opt','/home','/var','/var/log','/var/log/audit']
+	default_volume_group = "vg00"
+	application_volume_group = "vg00"
 	newlines = []
 	header = file('/home/svc-satellite-automation/satellite6_automation/KN_RHEL_default_partitioning_header').read()
 	eof = "\nEOF"

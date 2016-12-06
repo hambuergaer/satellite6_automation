@@ -10,14 +10,12 @@
 
 cat <<EOF > /tmp/diskpart.cfg
 zerombr
-clearpart --all --drives=sda,sdb,sdc --initlabel
+clearpart --all --drives=sda,sdb --initlabel
 
 part /boot --fstype=<%= fstype %> --asprimary --ondisk=sda --size=1000
 part pv.001 --asprimary --size=1 --ondisk=sdb --grow
-part pv.002 --asprimary --size=1 --ondisk=sdc --grow
 
-volgroup vg_system --pesize=4096 pv.001
-volgroup vg_data --pesize=4096 pv.002
+volgroup vg00 --pesize=4096 pv.001
 
 logvol swap --fstype=swap --name=swaplv --vgname=vg_system --size=4096
 
