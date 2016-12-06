@@ -17,6 +17,6 @@ part pv.001 --asprimary --size=1 --ondisk=sdb --grow
 
 volgroup vg00 --pesize=4096 pv.001
 
-logvol swap --fstype=swap --name=swaplv --vgname=vg_system --size=4096
+logvol swap --fstype=swap --name=swaplv --vgname=vg00 --size=4096
 
 
