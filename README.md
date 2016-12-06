@@ -190,7 +190,7 @@ hammer filter create --permissions view_organizations,assign_organizations --rol
 hammer filter create --permissions view_media --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Medium"
 hammer filter create --permissions view_architectures --role "Satellite automation Architecture"
 hammer filter create --permissions download_bootdisk --role "Satellite automation Bootdisk"
-hammer filter create --permissions view_lifecycle_environments --role "Satellite automation Lifecycle Environment"
+hammer filter create --permissions view_lifecycle_environments,promote_or_remove_content_views_to_environments --role "Satellite automation Lifecycle Environment"
 hammer filter create --permissions view_environments --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Environment"
 hammer filter create --permissions view_activation_keys --role "Satellite automation ActivationKey"
 hammer filter create --permissions view_realms --organizations <your-organizations> --locations <your-locations> --role "Satellite automation Realm"
